@@ -1,0 +1,70 @@
+---
+title: "Python Examples"
+description: "Python code examples for Blockline API integration"
+---
+
+# Python Examples
+
+Complete code examples for integrating Blockline API with Python.
+
+## Basic Request
+
+```python
+import os
+import requests
+
+API_KEY = os.getenv('BLOCKLINE_API_KEY')
+
+response = requests.post(
+    'https://api.soltop.sh/analyze-trade',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {API_KEY}'
+    },
+    json={
+        'signature': 'YOUR_TX_SIGNATURE',
+        'account_id': 'MARKET_ADDRESS',
+        'slot_range': 4
+    }
+)
+
+data = response.json()
+print(data)
+```
+
+## Error Handling
+
+```python
+import requests
+from typing import Dict, Any
+
+def analyze_trade(signature: str, account_id: str) -> Dict[str, Any]:
+    """Analyze a trade with proper error handling."""
+    try:
+        response = requests.post(
+            'https://api.soltop.sh/analyze-trade',
+            headers={
+                'Authorization': f'Bearer {os.getenv("BLOCKLINE_API_KEY")}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'signature': signature,
+                'account_id': account_id,
+                'slot_range': 4
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    except requests.exceptions.HTTPError as e:
+        print(f'API Error: {e.response.json()}')
+        raise
+    except requests.exceptions.RequestException as e:
+        print(f'Request failed: {e}')
+        raise
+```
+
+<Note>
+  **More examples coming soon!** Including async/await patterns, rate limiting, and batch processing.
+</Note>

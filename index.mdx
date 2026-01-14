@@ -1,97 +1,107 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "Professional MEV analytics for Solana traders and researchers"
 ---
 
-## Setting up
+# Welcome to Blockline
 
-Get your documentation site up and running in minutes.
+Blockline is a professional MEV analytics API for Solana, providing deep insights into transaction context, front-running detection, and competitive intelligence for MEV teams and traders.
+
+## What is Blockline?
+
+Blockline, born from the soltop ecosystem, is a commercial-first product designed specifically for MEV analysis on Solana. It provides real-time and historical analysis of on-chain activity, helping you understand who traded before and after you, detect sandwich attacks, and gain competitive advantages in the MEV landscape.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Front-Running Detection" icon="gauge-high">
+    Analyze transactions within ±N slots of your trade to see who got in before you
+  </Card>
+  <Card title="Sandwich Attack Analysis" icon="burger">
+    Detect MEV sandwich attacks by identifying matching signers before and after your transaction
+  </Card>
+  <Card title="PoH Tick Precision" icon="clock">
+    Understand exact transaction ordering with Proof of History tick offsets
+  </Card>
+  <Card title="Transaction Context" icon="chart-network">
+    See all market activity surrounding your trades with detailed metadata
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Get started with Blockline in three simple steps:
+
+<Steps>
+  <Step title="Get your API key">
+    Sign up at [blockline.mevseer.com](https://blockline.mevseer.com) and generate your API key from the dashboard
+  </Step>
+  <Step title="Make your first request">
+    Use your API key to analyze a transaction and see who competed with you
+  </Step>
+  <Step title="Explore use cases">
+    Learn advanced patterns like sandwich detection and competitive analysis
+  </Step>
+</Steps>
 
 <Card
-  title="Start here"
+  title="Start with the Quickstart Guide"
   icon="rocket"
   href="/quickstart"
-  horizontal
 >
-  Follow our three step quickstart guide.
+  Follow our quickstart guide to make your first API call
 </Card>
 
-## Make it yours
+## Core Endpoints
 
-Design a docs site that looks great and empowers your users.
+<CardGroup cols={2}>
+  <Card title="Analyze Trade Context" icon="magnifying-glass-chart" href="/api-reference/openapi#post-/analyze-trade">
+    Find all transactions that touched your market within ±N slots
+  </Card>
+  <Card title="Get Transaction Details" icon="file-invoice" href="/api-reference/openapi#get-/transaction/{signature}">
+    Retrieve detailed transaction information with validator metadata
+  </Card>
+  <Card title="Fetch Wallet Signatures" icon="wallet" href="/api-reference/openapi#post-/wallet/{address}/signatures">
+    Get transaction history for any wallet with intelligent caching
+  </Card>
+  <Card title="Enhance Metadata" icon="sparkles" href="/api-reference/openapi#post-/enhance-metadata">
+    Enrich transactions with balance changes and financial details
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+## Use Cases
 
-## Create beautiful pages
+Blockline is designed for:
 
-Everything you need to create world-class documentation.
+- **MEV Teams**: Analyze competition, optimize strategies, detect attacks
+- **Traders**: Understand market microstructure and transaction timing
+- **Researchers**: Study MEV patterns and validator behavior
+- **Developers**: Build MEV-aware trading applications
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Authentication
 
-## Need inspiration?
+All endpoints require API key authentication. Your API key should be included in the `Authorization` header:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+```bash
+curl -H "Authorization: Bearer sk_live_YOUR_API_KEY" \
+  https://api.soltop.sh/transaction/SIGNATURE
+```
+
+Get your API key from the [Blockline Dashboard](https://blockline.mevseer.com/dashboard/api-keys).
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference/openapi">
+    Explore all endpoints and their parameters
+  </Card>
+  <Card title="Use Cases & Patterns" icon="lightbulb" href="/guides/use-cases">
+    Learn how to detect front-running and sandwich attacks
+  </Card>
+  <Card title="Code Examples" icon="code" href="/guides/examples/javascript">
+    See practical examples in JavaScript and Python
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="https://blockline.mevseer.com">
+    Manage your API keys and subscription
+  </Card>
+</CardGroup>

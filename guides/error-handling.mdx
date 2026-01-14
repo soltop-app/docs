@@ -1,0 +1,48 @@
+---
+title: "Error Handling"
+description: "Comprehensive guide to handling errors in Blockline API"
+---
+
+# Error Handling
+
+Learn how to properly handle errors when working with the Blockline API.
+
+## Error Response Format
+
+All errors follow a consistent format:
+
+```json
+{
+  "error": "Error type",
+  "details": "Detailed error message or array of validation errors",
+  "timestamp": "2025-10-02T15:30:45.123Z"
+}
+```
+
+## Common Error Codes
+
+### 401 Unauthorized
+Invalid or missing API key
+
+### 403 Forbidden
+Invalid subscription status (expired, not active, no trial)
+
+### 400 Bad Request
+Validation errors (invalid signature format, parameters out of range, etc.)
+
+### 404 Not Found
+Transaction not found in database
+
+### 429 Too Many Requests
+Rate limit exceeded (see `retry_after_seconds`)
+
+### 503 Service Unavailable
+Database connection issues (ClickHouse/Redis unavailable)
+
+## Retry Strategies
+
+Implement exponential backoff with jitter for transient errors.
+
+<Note>
+  **Detailed error handling examples coming soon!** Check back for comprehensive guides.
+</Note>

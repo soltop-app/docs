@@ -1,0 +1,328 @@
+---
+title: "Rate Limits"
+description: "Understand API rate limits and how to handle them effectively"
+---
+
+# Rate Limits
+
+Blockline implements rate limiting to ensure fair usage and maintain API performance for all users. This guide explains the rate limits, how to stay within them, and how to handle rate limit errors.
+
+## Rate Limit Overview
+
+<Note>
+  Rate limits are applied **per API key** and **per endpoint**. Each endpoint has its own separate rate limit.
+</Note>
+
+### Endpoint Rate Limits
+
+| Endpoint | Rate Limit | Window |
+|----------|-----------|--------|
+| `POST /analyze-trade` | **6 requests** | Per minute |
+| `POST /backfill-transaction` | **No limit** | - |
+| `GET /transaction/:signature` | **6 requests** | Per minute |
+| `POST /wallet/:address/signatures` | **6 requests** | Per minute |
+| `POST /enhance-metadata` | **6 requests** | Per minute |
+
+### Global Rate Limit
+
+In addition to per-endpoint limits, there's a global rate limit:
+
+- **30 requests per minute** across all `/api/*` routes
+
+## Rate Limit Headers
+
+Every API response includes rate limit headers:
+
+```http
+X-RateLimit-Limit: 6
+X-RateLimit-Remaining: 3
+X-RateLimit-Reset: 1609459200
+```
+
+<ResponseField name="X-RateLimit-Limit" type="integer">
+  Maximum number of requests allowed in the current window
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Remaining" type="integer">
+  Number of requests remaining in the current window
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Reset" type="integer">
+  Unix timestamp when the rate limit window resets
+</ResponseField>
+
+## Handling Rate Limits
+
+### 429 Too Many Requests
+
+When you exceed the rate limit, the API returns a 429 status code:
+
+```json
+{
+  "error": "Too many requests",
+  "message": "Rate limit: 6 requests per minute. Please try again later.",
+  "retry_after_seconds": 45,
+  "timestamp": "2025-10-02T15:30:45.123Z"
+}
+```
+
+### Retry Strategy
+
+Implement exponential backoff when you receive a 429 error:
+
+<CodeGroup>
+
+```javascript JavaScript
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+
+    if (response.status === 429) {
+      const data = await response.json();
+      const waitSeconds = data.retry_after_seconds || Math.pow(2, i) * 10;
+
+      console.log(`Rate limited. Waiting ${waitSeconds} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error('Max retries exceeded');
+}
+
+// Usage
+const response = await makeRequestWithRetry(
+  'https://api.soltop.sh/analyze-trade',
+  {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${API_KEY}` },
+    body: JSON.stringify({...})
+  }
+);
+```
+
+```python Python
+import time
+import requests
+from typing import Optional
+
+def make_request_with_retry(
+    url: str,
+    headers: dict,
+    json_data: dict,
+    max_retries: int = 3
+) -> Optional[requests.Response]:
+
+    for attempt in range(max_retries):
+        response = requests.post(url, headers=headers, json=json_data)
+
+        if response.status_code == 429:
+            data = response.json()
+            wait_seconds = data.get('retry_after_seconds', 2 ** attempt * 10)
+
+            print(f'Rate limited. Waiting {wait_seconds} seconds...')
+            time.sleep(wait_seconds)
+            continue
+
+        return response
+
+    raise Exception('Max retries exceeded')
+
+# Usage
+response = make_request_with_retry(
+    'https://api.soltop.sh/analyze-trade',
+    headers={'Authorization': f'Bearer {API_KEY}'},
+    json_data={...}
+)
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Monitor rate limit headers" icon="chart-line">
+    Check `X-RateLimit-Remaining` before making requests:
+
+    ```javascript
+    const remaining = parseInt(response.headers.get('X-RateLimit-Remaining'));
+    if (remaining < 2) {
+      console.warn('Approaching rate limit!');
+      // Slow down or wait
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Implement request queuing" icon="list">
+    Use a queue to control request rate:
+
+    ```javascript
+    class RateLimitedQueue {
+      constructor(requestsPerMinute = 6) {
+        this.queue = [];
+        this.interval = (60 * 1000) / requestsPerMinute;
+        this.processing = false;
+      }
+
+      async add(fn) {
+        return new Promise((resolve, reject) => {
+          this.queue.push({ fn, resolve, reject });
+          this.process();
+        });
+      }
+
+      async process() {
+        if (this.processing || this.queue.length === 0) return;
+
+        this.processing = true;
+        const { fn, resolve, reject } = this.queue.shift();
+
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+
+        setTimeout(() => {
+          this.processing = false;
+          this.process();
+        }, this.interval);
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use caching effectively" icon="database">
+    The API provides built-in caching for some endpoints:
+
+    - **Wallet signatures**: 5-minute cache
+    - **Transaction details**: 5-minute cache
+    - **Enhanced metadata**: 48-hour cache
+
+    Leverage these caches to reduce redundant requests.
+  </Accordion>
+
+  <Accordion title="Batch requests when possible" icon="layer-group">
+    Instead of making multiple individual requests:
+
+    1. Use `/analyze-trade` to get all transactions in a slot range
+    2. Then use `/enhance-metadata` only for transactions you need details on
+    3. Use `hint_signature` in `/wallet/:address/signatures` for efficiency
+  </Accordion>
+</AccordionGroup>
+
+## Special Case: /backfill-transaction
+
+<Warning>
+  The `/backfill-transaction` endpoint currently has **no rate limiting**. However, this may change in the future. Use responsibly and avoid overwhelming the system.
+</Warning>
+
+Since backfill operations are async and resource-intensive:
+
+- Use sparingly and only when necessary
+- Don't make rapid concurrent backfill requests
+- Monitor the request ID returned for completion status
+
+## Upgrading Limits
+
+Need higher rate limits for production workloads?
+
+<Card title="Contact Us for Enterprise Plans" icon="building" href="https://blockline.mevseer.com/contact">
+  Enterprise plans offer higher rate limits, dedicated support, and SLAs
+</Card>
+
+## Monitoring Your Usage
+
+Track your API usage in the [Dashboard](https://blockline.mevseer.com/dashboard):
+
+- **Request count** per endpoint
+- **Rate limit hits** over time
+- **Peak usage** periods
+- **Error rates** including 429s
+
+## Common Patterns
+
+### Pattern 1: Respecting Rate Limits
+
+```javascript
+// Track request timestamps
+const requestTimestamps = [];
+
+async function rateLimitedRequest(url, options) {
+  const now = Date.now();
+  const oneMinuteAgo = now - 60000;
+
+  // Remove requests older than 1 minute
+  while (requestTimestamps.length > 0 && requestTimestamps[0] < oneMinuteAgo) {
+    requestTimestamps.shift();
+  }
+
+  // Wait if we're at the limit
+  if (requestTimestamps.length >= 6) {
+    const waitTime = requestTimestamps[0] + 60000 - now;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+
+  // Make the request
+  requestTimestamps.push(Date.now());
+  return fetch(url, options);
+}
+```
+
+### Pattern 2: Priority Queue
+
+```python
+import heapq
+import time
+from typing import Callable, Any
+
+class PriorityRateLimiter:
+    def __init__(self, rate_limit: int = 6):
+        self.rate_limit = rate_limit
+        self.queue = []  # Priority queue
+        self.timestamps = []
+
+    def add_request(self, fn: Callable, priority: int = 0) -> Any:
+        """Lower priority number = higher priority"""
+        heapq.heappush(self.queue, (priority, time.time(), fn))
+        return self.process()
+
+    def process(self):
+        # Clean old timestamps
+        now = time.time()
+        self.timestamps = [t for t in self.timestamps if now - t < 60]
+
+        # Wait if needed
+        if len(self.timestamps) >= self.rate_limit:
+            wait_time = 60 - (now - self.timestamps[0])
+            time.sleep(max(0, wait_time))
+
+        # Execute highest priority request
+        if self.queue:
+            _, _, fn = heapq.heappop(self.queue)
+            self.timestamps.append(time.time())
+            return fn()
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/guides/error-handling">
+    Learn comprehensive error handling strategies
+  </Card>
+
+  <Card title="Performance Optimization" icon="gauge-high" href="/guides/performance">
+    Optimize your API usage with caching and batching
+  </Card>
+
+  <Card title="API Reference" icon="book" href="/api-reference/openapi">
+    Explore all endpoints and their specifications
+  </Card>
+
+  <Card title="Integration Patterns" icon="puzzle-piece" href="/guides/integration-patterns">
+    Learn efficient integration patterns
+  </Card>
+</CardGroup>

@@ -1,0 +1,61 @@
+---
+title: "JavaScript Examples"
+description: "JavaScript and Node.js code examples for Blockline API"
+---
+
+# JavaScript / Node.js Examples
+
+Complete code examples for integrating Blockline API with JavaScript and Node.js.
+
+## Basic Request
+
+```javascript
+const API_KEY = process.env.BLOCKLINE_API_KEY;
+
+const response = await fetch('https://api.soltop.sh/analyze-trade', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${API_KEY}`
+  },
+  body: JSON.stringify({
+    signature: 'YOUR_TX_SIGNATURE',
+    account_id: 'MARKET_ADDRESS',
+    slot_range: 4
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+## Error Handling
+
+```javascript
+async function analyzeTrade(signature, accountId) {
+  try {
+    const response = await fetch('https://api.soltop.sh/analyze-trade', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.BLOCKLINE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ signature, account_id: accountId, slot_range: 4 })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`API Error: ${error.error}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to analyze trade:', error);
+    throw error;
+  }
+}
+```
+
+<Note>
+  **More examples coming soon!** Including rate limiting, pagination, and complete workflows.
+</Note>

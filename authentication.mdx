@@ -1,0 +1,254 @@
+---
+title: "Authentication"
+description: "Learn how to authenticate requests to the Blockline API using API keys"
+---
+
+# Authentication
+
+All Blockline API endpoints require authentication using API keys. This guide explains how to obtain, use, and manage your API keys securely.
+
+## API Key Format
+
+Blockline uses bearer token authentication with two types of API keys:
+
+- **Production keys**: `sk_live_` prefix - Use in production environments
+- **Test keys**: `sk_test_` prefix - Use for development and testing
+
+Example: `sk_live_abcd....7890`
+
+## Getting Your API Key
+
+<Steps>
+  <Step title="Create an account">
+    Sign up at [blockline.mevseer.com](https://blockline.mevseer.com) if you haven't already
+  </Step>
+
+{" "}
+<Step title="Access the dashboard">
+  Navigate to **Dashboard** → **API Keys**
+</Step>
+
+{" "}
+<Step title="Generate a new key">
+  1. Click "Create New API Key" 2. Give your key a descriptive name (e.g.,
+  "Production API", "Dev Testing") 3. Optionally set an expiration date 4. Click
+  "Generate"
+</Step>
+
+  <Step title="Save your key">
+    <Warning>
+      **Your key is shown only once!** Copy it immediately and store it in a secure location like a password manager or environment variable.
+    </Warning>
+  </Step>
+</Steps>
+
+## Using Your API Key
+
+Include your API key in the `Authorization` header of every request:
+
+<CodeGroup>
+
+```bash curl
+curl -H "Authorization: Bearer sk_live_YOUR_API_KEY" \
+  https://api.soltop.sh/transaction/SIGNATURE
+```
+
+```javascript JavaScript / Node.js
+const headers = {
+  'Authorization': 'Bearer sk_live_YOUR_API_KEY',
+  'Content-Type': 'application/json'
+};
+
+const response = await fetch('https://api.soltop.sh/analyze-trade', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({...})
+});
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': 'Bearer sk_live_YOUR_API_KEY',
+    'Content-Type': 'application/json'
+}
+
+response = requests.post(
+    'https://api.soltop.sh/analyze-trade',
+    headers=headers,
+    json={...}
+)
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store keys securely" icon="lock">
+    - **Never commit keys to version control** - Add them to `.gitignore`
+    - **Use environment variables** - Store keys in `.env` files or secure vaults
+    - **Rotate keys regularly** - Generate new keys periodically and revoke old ones
+    - **Use separate keys for different environments** - One for production, one for development
+  </Accordion>
+
+{" "}
+<Accordion title="Protect your keys" icon="shield">
+  - **Don't expose in client-side code** - API keys should only be used
+  server-side - **Don't log keys** - Sanitize logs to prevent accidental
+  exposure - **Use HTTPS only** - Always make requests over HTTPS (not HTTP) -
+  **Revoke compromised keys immediately** - If a key is exposed, revoke it in
+  the dashboard
+</Accordion>
+
+  <Accordion title="Monitor usage" icon="chart-line">
+    - Check "Last Used" timestamps in the dashboard
+    - Review API usage patterns for anomalies
+    - Set up alerts for unusual activity
+    - Track which keys are being used for what purposes
+  </Accordion>
+</AccordionGroup>
+
+## Managing API Keys
+
+### View All Keys
+
+Visit your [API Keys dashboard](https://blockline.mevseer.com/dashboard/api-keys) to see:
+
+- Key prefix (e.g., `sk_live_xxxxxx...`)
+- Name and description
+- Created date
+- Last used timestamp
+- Expiration date (if set)
+
+### Revoke a Key
+
+To revoke an API key:
+
+1. Go to **Dashboard** → **API Keys**
+2. Find the key you want to revoke
+3. Click **Revoke** or the trash icon
+4. Confirm the action
+
+<Warning>
+  Revoking a key is **immediate** and **irreversible**. Any applications using
+  the revoked key will start receiving 401 errors.
+</Warning>
+
+### Key Rotation
+
+It's good practice to rotate API keys periodically:
+
+1. Generate a new API key
+2. Update your applications to use the new key
+3. Test that everything works with the new key
+4. Revoke the old key
+
+## Subscription Requirements
+
+API keys must be associated with an active subscription. Subscription statuses:
+
+- ✅ **Trial** - Free trial period with full access
+- ✅ **Active** - Paid subscription in good standing
+- ✅ **Grace Period** - Brief period after subscription expires
+- ❌ **Expired** - No access, 403 errors returned
+
+Check your subscription status in the [Dashboard](https://blockline.mevseer.com/dashboard).
+
+## Error Responses
+
+### 401 Unauthorized
+
+**Cause**: Invalid, missing, or revoked API key
+
+```json
+{
+  "error": "Invalid API key",
+  "details": "API key is invalid or has been revoked",
+  "timestamp": "2025-10-02T15:30:45.123Z"
+}
+```
+
+**Solutions**:
+
+- Verify the key is correctly formatted: `Bearer sk_live_...` or `Bearer sk_test_...`
+- Check that the key hasn't been revoked in the dashboard
+- Ensure you're including the `Authorization` header
+
+### 403 Forbidden
+
+**Cause**: Subscription required or expired
+
+```json
+{
+  "error": "Subscription required",
+  "details": "Active subscription (trial, active, or grace_period) required",
+  "timestamp": "2025-10-02T15:30:45.123Z"
+}
+```
+
+**Solution**: Visit [your dashboard](https://blockline.mevseer.com/dashboard) to activate or renew your subscription
+
+## Environment Variables
+
+### Recommended Setup
+
+Store your API key in environment variables:
+
+<CodeGroup>
+
+```bash .env
+# Development
+BLOCKLINE_API_KEY=sk_test_YOUR_TEST_KEY_HERE
+
+# Production
+BLOCKLINE_API_KEY=sk_live_YOUR_PRODUCTION_KEY_HERE
+```
+
+```javascript Node.js
+// Load from environment
+require("dotenv").config();
+const API_KEY = process.env.BLOCKLINE_API_KEY;
+
+// Use in requests
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+};
+```
+
+```python Python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+API_KEY = os.getenv('BLOCKLINE_API_KEY')
+
+headers = {
+    'Authorization': f'Bearer {API_KEY}'
+}
+```
+
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Make Your First Request" icon="rocket" href="/quickstart">
+    Follow the quickstart guide to authenticate and analyze your first transaction
+  </Card>
+
+{" "}
+<Card title="Understand Rate Limits" icon="gauge" href="/rate-limits">
+  Learn about API rate limits and how to handle them
+</Card>
+
+{" "}
+<Card title="API Reference" icon="book" href="/api-reference/openapi">
+  Explore all available endpoints
+</Card>
+
+  <Card title="Error Handling" icon="triangle-exclamation" href="/guides/error-handling">
+    Learn how to handle authentication and other errors
+  </Card>
+</CardGroup>

@@ -1,0 +1,50 @@
+---
+title: "Performance & Optimization"
+description: "Optimize your Blockline API usage for best performance"
+---
+
+# Performance & Optimization
+
+Learn how to optimize your API usage for best performance and cost-efficiency.
+
+## Response Times
+
+Average response times:
+- **20-100ms** for most endpoints
+- Cached responses are faster
+
+## Data Retention
+
+- **15 days** for detailed transaction data
+- Older data may be archived or unavailable
+
+## Caching Strategies
+
+The API provides automatic caching:
+
+- **Wallet signatures**: 5-minute in-memory cache
+- **Transaction details**: 5-minute in-memory cache
+- **Enhanced metadata**: 48-hour Redis cache (automatic)
+
+Leverage these caches to reduce redundant requests and improve performance.
+
+## Time Window Constraints
+
+- **Wallet signatures**: 7-day maximum lookback enforced
+- Requests outside this window will be rejected
+
+## RPC Optimization
+
+- Use `hint_signature` parameter for efficient wallet signature fetching
+- Batch related requests together
+- Use appropriate `slot_range` values (larger ranges = more data)
+
+## Pagination Best Practices
+
+- Use `limit=100` for active markets with high transaction volume
+- Implement cursor-based pagination with `before` parameter
+- Check `has_more` flag to determine if additional pages exist
+
+<Note>
+  **Detailed performance guides coming soon!** Including profiling, batching strategies, and advanced optimization techniques.
+</Note>

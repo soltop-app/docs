@@ -9,7 +9,7 @@ Get up and running with the Blockline API in three simple steps. You'll learn ho
 
 ## Prerequisites
 
-- A Blockline account ([sign up here](https://blockline.mevseer.com))
+- A Blockline account ([sign up here](https://blockline.soltop.sh))
 - A Solana transaction signature to analyze
 - Basic knowledge of HTTP APIs and curl/your programming language of choice
 
@@ -17,12 +17,14 @@ Get up and running with the Blockline API in three simple steps. You'll learn ho
 
 <Steps>
   <Step title="Sign up for Blockline">
-    Visit [blockline.mevseer.com](https://blockline.mevseer.com) and create an account. New users get a free trial to explore the API.
+    Visit [blockline.soltop.sh](https://blockline.soltop.sh) and create an account. New users get a free trial to explore the API.
   </Step>
 
-  <Step title="Navigate to API Keys">
-    Once logged in, go to [Dashboard → API Keys](https://blockline.mevseer.com/dashboard/api-keys)
-  </Step>
+{" "}
+<Step title="Navigate to API Keys">
+  Once logged in, go to [Dashboard → API
+  Keys](https://blockline.soltop.sh/dashboard/api-keys)
+</Step>
 
   <Step title="Generate a new key">
     Click **"Create New API Key"**, give it a name (e.g., "Production"), and save the key securely.
@@ -30,6 +32,7 @@ Get up and running with the Blockline API in three simple steps. You'll learn ho
     <Warning>
       Your API key is shown only once! Copy it immediately and store it securely. It looks like: `sk_live_xxxxxxxxxx...`
     </Warning>
+
   </Step>
 </Steps>
 
@@ -51,17 +54,18 @@ curl -X POST https://api.soltop.sh/analyze-trade \
 ```
 
 ```javascript JavaScript
-const response = await fetch('https://api.soltop.sh/analyze-trade', {
-  method: 'POST',
+const response = await fetch("https://api.soltop.sh/analyze-trade", {
+  method: "POST",
   headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer sk_live_YOUR_API_KEY'
+    "Content-Type": "application/json",
+    Authorization: "Bearer sk_live_YOUR_API_KEY",
   },
   body: JSON.stringify({
-    signature: 'pHXgUjY4cVvi5orXuK3b66MBhF2W3MpXruRGKodqTWze7354iVQ66k1rWCzyWTU7UDeebojPTpW9ZmVv9Dn12cg',
-    account_id: 'FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump',
-    slot_range: 4
-  })
+    signature:
+      "pHXgUjY4cVvi5orXuK3b66MBhF2W3MpXruRGKodqTWze7354iVQ66k1rWCzyWTU7UDeebojPTpW9ZmVv9Dn12cg",
+    account_id: "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump",
+    slot_range: 4,
+  }),
 });
 
 const data = await response.json();
@@ -97,7 +101,8 @@ print(data)
 - **slot_range**: Number of slots before/after to search (default: 4, max: 100)
 
 <Tip>
-  Don't have a transaction to test with? Use the example signature above to see how it works!
+  Don't have a transaction to test with? Use the example signature above to see
+  how it works!
 </Tip>
 
 ## Step 3: Understand the Response
@@ -140,13 +145,12 @@ The API returns all transactions that touched the same market within ±4 slots o
 
 <ResponseField name="poh_tick_offset" type="integer">
   **Negative** = transaction happened before yours (potential front-runner)
-  **Zero** = your transaction
-  **Positive** = transaction happened after yours (potential back-runner)
+  **Zero** = your transaction **Positive** = transaction happened after yours
+  (potential back-runner)
 </ResponseField>
 
 <ResponseField name="slot_offset" type="integer">
-  **Negative** = earlier slot/block
-  **Zero** = same slot as your transaction
+  **Negative** = earlier slot/block **Zero** = same slot as your transaction
   **Positive** = later slot/block
 </ResponseField>
 
@@ -158,15 +162,18 @@ The API returns all transactions that touched the same market within ±4 slots o
     **Solution**: Check that you're including the `Authorization: Bearer sk_live_...` header with a valid API key
   </Accordion>
 
-  <Accordion title="403 Forbidden">
-    **Cause**: Subscription required or expired
-    **Solution**: Ensure your subscription is active (trial, active, or grace period) at [your dashboard](https://blockline.mevseer.com/dashboard)
-  </Accordion>
+{" "}
+<Accordion title="403 Forbidden">
+  **Cause**: Subscription required or expired **Solution**: Ensure your
+  subscription is active (trial, active, or grace period) at [your
+  dashboard](https://blockline.soltop.sh/dashboard)
+</Accordion>
 
-  <Accordion title="400 Bad Request">
-    **Cause**: Invalid signature format or parameters
-    **Solution**: Verify your signature is base58-encoded and 87-88 characters long
-  </Accordion>
+{" "}
+<Accordion title="400 Bad Request">
+  **Cause**: Invalid signature format or parameters **Solution**: Verify your
+  signature is base58-encoded and 87-88 characters long
+</Accordion>
 
   <Accordion title="429 Too Many Requests">
     **Cause**: Rate limit exceeded (6 requests/minute)
@@ -183,13 +190,23 @@ Now that you've made your first request, explore more capabilities:
     Learn how to identify transactions that front-ran yours
   </Card>
 
-  <Card title="Find Sandwich Attacks" icon="burger" href="/guides/use-cases#mev-sandwich-detection">
-    Detect if you were sandwiched by MEV bots
-  </Card>
+{" "}
+<Card
+  title="Find Sandwich Attacks"
+  icon="burger"
+  href="/guides/use-cases#mev-sandwich-detection"
+>
+  Detect if you were sandwiched by MEV bots
+</Card>
 
-  <Card title="Get Transaction Details" icon="file-invoice" href="/api-reference/openapi#get-/transaction/{signature}">
-    Fetch detailed transaction metadata including fees and tokens
-  </Card>
+{" "}
+<Card
+  title="Get Transaction Details"
+  icon="file-invoice"
+  href="/api-reference/openapi#get-/transaction/{signature}"
+>
+  Fetch detailed transaction metadata including fees and tokens
+</Card>
 
   <Card title="Code Examples" icon="code" href="/guides/examples/javascript">
     See complete integration examples in JavaScript and Python
@@ -197,7 +214,8 @@ Now that you've made your first request, explore more capabilities:
 </CardGroup>
 
 <Check>
-  **You're all set!** You now know how to authenticate and make requests to the Blockline API.
+  **You're all set!** You now know how to authenticate and make requests to the
+  Blockline API.
 </Check>
 
 ## Need Help?
@@ -205,4 +223,4 @@ Now that you've made your first request, explore more capabilities:
 - Read the full [API Reference](/api-reference/openapi)
 - Explore [Use Cases & Patterns](/guides/use-cases)
 - Check [Error Handling Guide](/guides/error-handling)
-- Visit the [Dashboard](https://blockline.mevseer.com)
+- Visit the [Dashboard](https://blockline.soltop.sh)

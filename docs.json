@@ -19,12 +19,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "index",
-              "quickstart",
-              "authentication",
-              "rate-limits"
-            ]
+            "pages": ["index", "quickstart", "authentication", "rate-limits"]
           }
         ]
       },
@@ -33,9 +28,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "api-reference/introduction"
-            ]
+            "pages": ["api-reference/introduction"]
           },
           {
             "group": "Endpoints",
@@ -48,24 +41,15 @@
         "groups": [
           {
             "group": "Use Cases & Patterns",
-            "pages": [
-              "guides/use-cases",
-              "guides/integration-patterns"
-            ]
+            "pages": ["guides/use-cases", "guides/integration-patterns"]
           },
           {
             "group": "Code Examples",
-            "pages": [
-              "guides/examples/javascript",
-              "guides/examples/python"
-            ]
+            "pages": ["guides/examples/javascript", "guides/examples/python"]
           },
           {
             "group": "Advanced",
-            "pages": [
-              "guides/error-handling",
-              "guides/performance"
-            ]
+            "pages": ["guides/error-handling", "guides/performance"]
           }
         ]
       }
@@ -74,7 +58,7 @@
       "anchors": [
         {
           "anchor": "Dashboard",
-          "href": "https://blockline.mevseer.com",
+          "href": "https://blockline.soltop.sh",
           "icon": "chart-line"
         },
         {
@@ -93,24 +77,17 @@
     "links": [
       {
         "label": "Get API Key",
-        "href": "https://blockline.mevseer.com/dashboard/api-keys"
+        "href": "https://blockline.soltop.sh/dashboard/api-keys"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://blockline.mevseer.com"
+      "href": "https://blockline.soltop.sh"
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "cursor", "vscode"]
   },
   "footer": {
     "socials": {

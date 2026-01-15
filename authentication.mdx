@@ -20,15 +20,17 @@ Example: `sk_live_abcd....7890`
 
 <Steps>
   <Step title="Create an account">
-    Sign up at [blockline.mevseer.com](https://blockline.mevseer.com) if you haven't already
+    Sign up at [blockline.soltop.sh](https://blockline.soltop.sh) if you haven't already
   </Step>
 
 {" "}
+
 <Step title="Access the dashboard">
   Navigate to **Dashboard** → **API Keys**
 </Step>
 
 {" "}
+
 <Step title="Generate a new key">
   1. Click "Create New API Key" 2. Give your key a descriptive name (e.g.,
   "Production API", "Dev Testing") 3. Optionally set an expiration date 4. Click
@@ -94,6 +96,7 @@ response = requests.post(
   </Accordion>
 
 {" "}
+
 <Accordion title="Protect your keys" icon="shield">
   - **Don't expose in client-side code** - API keys should only be used
   server-side - **Don't log keys** - Sanitize logs to prevent accidental
@@ -114,7 +117,7 @@ response = requests.post(
 
 ### View All Keys
 
-Visit your [API Keys dashboard](https://blockline.mevseer.com/dashboard/api-keys) to see:
+Visit your [API Keys dashboard](https://blockline.soltop.sh/dashboard/api-keys) to see:
 
 - Key prefix (e.g., `sk_live_xxxxxx...`)
 - Name and description
@@ -154,7 +157,7 @@ API keys must be associated with an active subscription. Subscription statuses:
 - ✅ **Grace Period** - Brief period after subscription expires
 - ❌ **Expired** - No access, 403 errors returned
 
-Check your subscription status in the [Dashboard](https://blockline.mevseer.com/dashboard).
+Check your subscription status in the [Dashboard](https://blockline.soltop.sh/dashboard).
 
 ## Error Responses
 
@@ -188,7 +191,7 @@ Check your subscription status in the [Dashboard](https://blockline.mevseer.com/
 }
 ```
 
-**Solution**: Visit [your dashboard](https://blockline.mevseer.com/dashboard) to activate or renew your subscription
+**Solution**: Visit [your dashboard](https://blockline.soltop.sh/dashboard) to activate or renew your subscription
 
 ## Environment Variables
 
@@ -239,11 +242,13 @@ headers = {
   </Card>
 
 {" "}
+
 <Card title="Understand Rate Limits" icon="gauge" href="/rate-limits">
   Learn about API rate limits and how to handle them
 </Card>
 
 {" "}
+
 <Card title="API Reference" icon="book" href="/api-reference/openapi">
   Explore all available endpoints
 </Card>

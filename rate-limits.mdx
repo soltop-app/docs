@@ -10,18 +10,19 @@ Blockline implements rate limiting to ensure fair usage and maintain API perform
 ## Rate Limit Overview
 
 <Note>
-  Rate limits are applied **per API key** and **per endpoint**. Each endpoint has its own separate rate limit.
+  Rate limits are applied **per API key** and **per endpoint**. Each endpoint
+  has its own separate rate limit.
 </Note>
 
 ### Endpoint Rate Limits
 
-| Endpoint | Rate Limit | Window |
-|----------|-----------|--------|
-| `POST /analyze-trade` | **6 requests** | Per minute |
-| `POST /backfill-transaction` | **No limit** | - |
-| `GET /transaction/:signature` | **6 requests** | Per minute |
+| Endpoint                           | Rate Limit     | Window     |
+| ---------------------------------- | -------------- | ---------- |
+| `POST /analyze-trade`              | **6 requests** | Per minute |
+| `POST /backfill-transaction`       | **No limit**   | -          |
+| `GET /transaction/:signature`      | **6 requests** | Per minute |
 | `POST /wallet/:address/signatures` | **6 requests** | Per minute |
-| `POST /enhance-metadata` | **6 requests** | Per minute |
+| `POST /enhance-metadata`           | **6 requests** | Per minute |
 
 ### Global Rate Limit
 
@@ -153,6 +154,7 @@ response = make_request_with_retry(
       // Slow down or wait
     }
     ```
+
   </Accordion>
 
   <Accordion title="Implement request queuing" icon="list">
@@ -193,6 +195,7 @@ response = make_request_with_retry(
       }
     }
     ```
+
   </Accordion>
 
   <Accordion title="Use caching effectively" icon="database">
@@ -203,6 +206,7 @@ response = make_request_with_retry(
     - **Enhanced metadata**: 48-hour cache
 
     Leverage these caches to reduce redundant requests.
+
   </Accordion>
 
   <Accordion title="Batch requests when possible" icon="layer-group">
@@ -211,13 +215,16 @@ response = make_request_with_retry(
     1. Use `/analyze-trade` to get all transactions in a slot range
     2. Then use `/enhance-metadata` only for transactions you need details on
     3. Use `hint_signature` in `/wallet/:address/signatures` for efficiency
+
   </Accordion>
 </AccordionGroup>
 
 ## Special Case: /backfill-transaction
 
 <Warning>
-  The `/backfill-transaction` endpoint currently has **no rate limiting**. However, this may change in the future. Use responsibly and avoid overwhelming the system.
+  The `/backfill-transaction` endpoint currently has **no rate limiting**.
+  However, this may change in the future. Use responsibly and avoid overwhelming
+  the system.
 </Warning>
 
 Since backfill operations are async and resource-intensive:
@@ -230,13 +237,19 @@ Since backfill operations are async and resource-intensive:
 
 Need higher rate limits for production workloads?
 
-<Card title="Contact Us for Enterprise Plans" icon="building" href="https://blockline.mevseer.com/contact">
-  Enterprise plans offer higher rate limits, dedicated support, and SLAs
+<Card
+  title="Contact Us for Enterprise Plans"
+  icon="building"
+  href="https://blockline.soltop.sh/contact"
+>
+  Enterprise plans offer higher rate limits, dedicated support, and SLAs.
+  <br />
+  Email: <a href="mailto:support@soltop.sh">support@soltop.sh</a>
 </Card>
 
 ## Monitoring Your Usage
 
-Track your API usage in the [Dashboard](https://blockline.mevseer.com/dashboard):
+Track your API usage in the [Dashboard](https://blockline.soltop.sh/dashboard):
 
 - **Request count** per endpoint
 - **Rate limit hits** over time
@@ -263,7 +276,7 @@ async function rateLimitedRequest(url, options) {
   // Wait if we're at the limit
   if (requestTimestamps.length >= 6) {
     const waitTime = requestTimestamps[0] + 60000 - now;
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
   }
 
   // Make the request
@@ -314,13 +327,21 @@ class PriorityRateLimiter:
     Learn comprehensive error handling strategies
   </Card>
 
-  <Card title="Performance Optimization" icon="gauge-high" href="/guides/performance">
-    Optimize your API usage with caching and batching
-  </Card>
+{" "}
 
-  <Card title="API Reference" icon="book" href="/api-reference/openapi">
-    Explore all endpoints and their specifications
-  </Card>
+<Card
+  title="Performance Optimization"
+  icon="gauge-high"
+  href="/guides/performance"
+>
+  Optimize your API usage with caching and batching
+</Card>
+
+{" "}
+
+<Card title="API Reference" icon="book" href="/api-reference/openapi">
+  Explore all endpoints and their specifications
+</Card>
 
   <Card title="Integration Patterns" icon="puzzle-piece" href="/guides/integration-patterns">
     Learn efficient integration patterns

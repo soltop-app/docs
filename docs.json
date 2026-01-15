@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "palm",
   "name": "Blockline",
   "colors": {
-    "primary": "#00ff00",
-    "light": "#00ffff",
-    "dark": "#00ff00"
+    "primary": "#60bb06",
+    "light": "#60bb06",
+    "dark": "#60bb06"
   },
   "modeToggle": {
     "default": "dark",

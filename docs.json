@@ -5,10 +5,7 @@
   "colors": {
     "primary": "#00ff00",
     "light": "#00ffff",
-    "dark": "#00ff00",
-    "background": {
-      "dark": "#0a0a0a"
-    }
+    "dark": "#00ff00"
   },
   "modeToggle": {
     "default": "dark",
@@ -35,10 +32,14 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "Endpoints",
+            "group": "Getting Started",
             "pages": [
-              "api-reference/openapi"
+              "api-reference/introduction"
             ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "api-reference/openapi.json"
           }
         ]
       },
@@ -116,6 +117,5 @@
       "x": "https://x.com/soltopsh",
       "github": "https://github.com/soltop"
     }
-  },
-  "openapi": "api-reference/openapi.json"
+  }
 }

@@ -27,6 +27,12 @@
         "scheme": "bearer",
         "bearerFormat": "API Key",
         "description": "API Key authentication. Format: `sk_live_xxx` (production) or `sk_test_xxx` (testing). Obtain your API key from the [Blockline Dashboard](https://blockline.mevseer.com/dashboard/api-keys)."
+      },
+      "SupabaseJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase JWT authentication. Used for MEV Analysis and Write Locks endpoints. Requires an active subscription (trial, active, or grace_period status)."
       }
     },
     "schemas": {
@@ -649,7 +655,7 @@
                           "type": "object",
                           "properties": {
                             "fee": {"type": "integer", "description": "Transaction fee in lamports"},
-                            "err": {"type": ["object", "null"], "description": "Error object if transaction failed"},
+                            "err": {"type": "object", "nullable": true, "description": "Error object if transaction failed"},
                             "compute_units_consumed": {"type": "integer"},
                             "signer": {"type": "string", "description": "Transaction signer pubkey"},
                             "leader": {"type": "string"},
@@ -713,7 +719,661 @@
           "400": {"$ref": "#/paths/~1analyze-trade/post/responses/400"},
           "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"},
           "403": {"$ref": "#/paths/~1analyze-trade/post/responses/403"},
-          "404": {"$ref": "#/paths/~1analyze-trade/post/responses/404"},
+          "404": {
+            "description": "Transaction not found",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "example": {
+                  "error": "Transaction not found",
+                  "details": "No transaction found with signature: abc123...",
+                  "timestamp": "2025-10-02T15:30:45.123Z"
+                }
+              }
+            }
+          },
+          "429": {"$ref": "#/paths/~1analyze-trade/post/responses/429"}
+        }
+      }
+    },
+    "/mev/discover-competitors": {
+      "post": {
+        "summary": "Discover MEV Competitors",
+        "description": "Discover all competitor wallets that frequently frontrun/backrun a target wallet on the same DEX pools. This endpoint submits an asynchronous job and returns a jobId. Poll `/mev/job-status/:jobId` to retrieve results. Features intelligent caching (10min TTL) and filters to DEX pools only.",
+        "operationId": "discoverCompetitors",
+        "tags": ["MEV Analysis"],
+        "security": [{"SupabaseJWT": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet_address"],
+                "properties": {
+                  "wallet_address": {
+                    "type": "string",
+                    "description": "Target wallet address to analyze (base58, 32-44 characters)",
+                    "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+                    "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"
+                  },
+                  "time_range_days": {
+                    "type": "integer",
+                    "description": "Number of days to analyze",
+                    "default": 7,
+                    "minimum": 1,
+                    "maximum": 30,
+                    "example": 7
+                  },
+                  "min_interactions": {
+                    "type": "integer",
+                    "description": "Minimum number of interactions to consider a competitor",
+                    "default": 3,
+                    "minimum": 1,
+                    "example": 3
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of competitors to return",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "example": 20
+                  },
+                  "slot_window": {
+                    "type": "integer",
+                    "description": "Slot window for considering proximity (±N slots)",
+                    "default": 4,
+                    "minimum": 1,
+                    "example": 4
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job submitted successfully or cached result returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "description": "Job queued response",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "jobId": {"type": "string", "example": "abc123def456"},
+                        "status": {"type": "string", "example": "queued"},
+                        "message": {"type": "string", "example": "Analysis started. Poll /mev/job-status/:jobId for updates."}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Cached result response (immediate)",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "cached": {"type": "boolean", "example": true},
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "competitors": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "wallet": {"type": "string"},
+                                  "mev_score": {"type": "number", "description": "Score 0-100"},
+                                  "frontrun_count": {"type": "integer"},
+                                  "backrun_count": {"type": "integer"},
+                                  "sandwich_count": {"type": "integer"},
+                                  "total_interactions": {"type": "integer"}
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "example": {
+                  "error": "Invalid wallet address",
+                  "details": "wallet_address must be a valid base58 string (32-44 characters)",
+                  "timestamp": "2025-10-02T15:30:45.123Z"
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"},
+          "403": {"$ref": "#/paths/~1analyze-trade/post/responses/403"},
+          "429": {"$ref": "#/paths/~1analyze-trade/post/responses/429"}
+        }
+      }
+    },
+    "/mev/validate-competition": {
+      "post": {
+        "summary": "Validate MEV Competition",
+        "description": "Compare two specific wallets to generate detailed MEV interaction statistics (how often wallet B frontruns/backruns wallet A). Submits an async job and returns a jobId. Poll `/mev/job-status/:jobId` for results. Page 1 results are cached for 5 minutes.",
+        "operationId": "validateCompetition",
+        "tags": ["MEV Analysis"],
+        "security": [{"SupabaseJWT": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet_a", "wallet_b"],
+                "properties": {
+                  "wallet_a": {
+                    "type": "string",
+                    "description": "First wallet address (base58)",
+                    "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+                    "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"
+                  },
+                  "wallet_b": {
+                    "type": "string",
+                    "description": "Second wallet address to compare (base58)",
+                    "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+                    "example": "HwraPsoNmYpumpFnmStvzQ27Pm4U8r3M6gPD7mnk6ST6"
+                  },
+                  "time_range_days": {
+                    "type": "integer",
+                    "description": "Number of days to analyze",
+                    "default": 7,
+                    "minimum": 1,
+                    "maximum": 30,
+                    "example": 7
+                  },
+                  "slot_window": {
+                    "type": "integer",
+                    "description": "Slot window for proximity (±N slots)",
+                    "default": 4,
+                    "minimum": 1,
+                    "example": 4
+                  },
+                  "page": {
+                    "type": "integer",
+                    "description": "Page number for incident details",
+                    "default": 1,
+                    "minimum": 1,
+                    "example": 1
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Results per page",
+                    "default": 100,
+                    "minimum": 1,
+                    "maximum": 500,
+                    "example": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job submitted or cached result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "description": "Job queued response",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "jobId": {"type": "string", "example": "xyz789abc123"},
+                        "status": {"type": "string", "example": "queued"},
+                        "message": {"type": "string", "example": "Analysis started. Poll /mev/job-status/:jobId for updates."}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Cached validation results",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "cached": {"type": "boolean", "example": true},
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "wallet_a": {"type": "string"},
+                            "wallet_b": {"type": "string"},
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "total_incidents": {"type": "integer"},
+                                "frontrun_count": {"type": "integer"},
+                                "backrun_count": {"type": "integer"},
+                                "sandwich_count": {"type": "integer"}
+                              }
+                            },
+                            "incidents": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {"type": "integer"},
+                                  "timestamp": {"type": "string"},
+                                  "pattern": {"type": "string", "example": "frontrun"},
+                                  "wallet_a_signature": {"type": "string"},
+                                  "wallet_b_signature": {"type": "string"}
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "example": {
+                  "error": "Invalid parameters",
+                  "details": "Both wallet_a and wallet_b are required",
+                  "timestamp": "2025-10-02T15:30:45.123Z"
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"},
+          "403": {"$ref": "#/paths/~1analyze-trade/post/responses/403"},
+          "429": {"$ref": "#/paths/~1analyze-trade/post/responses/429"}
+        }
+      }
+    },
+    "/mev/job-status/{jobId}": {
+      "get": {
+        "summary": "Get MEV Job Status",
+        "description": "Poll for job status and retrieve results when complete. Used for both discovery and validation jobs. Job states: waiting (queued), active (processing), completed (results available), failed (error occurred). No subscription check - allows retrieving results even if subscription expires during processing.",
+        "operationId": "getMevJobStatus",
+        "tags": ["MEV Analysis"],
+        "security": [{"SupabaseJWT": []}],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "Job ID returned from discover-competitors or validate-competition endpoint",
+            "schema": {
+              "type": "string",
+              "example": "abc123def456"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status and results (if completed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "description": "Job in progress",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "id": {"type": "string", "example": "abc123def456"},
+                        "state": {"type": "string", "enum": ["waiting", "active"], "example": "active"},
+                        "progress": {"type": "number", "description": "0-100", "example": 45},
+                        "createdAt": {"type": "string", "format": "date-time", "example": "2025-10-02T15:30:00Z"}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Job completed",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "id": {"type": "string"},
+                        "state": {"type": "string", "enum": ["completed"], "example": "completed"},
+                        "progress": {"type": "number", "example": 100},
+                        "createdAt": {"type": "string", "format": "date-time"},
+                        "data": {
+                          "type": "object",
+                          "description": "Analysis results (structure depends on job type)"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Job failed",
+                      "properties": {
+                        "success": {"type": "boolean", "example": true},
+                        "id": {"type": "string"},
+                        "state": {"type": "string", "enum": ["failed"], "example": "failed"},
+                        "error": {"type": "string", "example": "Analysis timeout after 15 minutes"},
+                        "createdAt": {"type": "string", "format": "date-time"}
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "example": {
+                  "error": "Job not found",
+                  "details": "No job found with ID: abc123def456",
+                  "timestamp": "2025-10-02T15:30:45.123Z"
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"}
+        }
+      }
+    },
+    "/api/write-locks/account": {
+      "post": {
+        "summary": "Analyze Account Write Locks",
+        "description": "Analyze write lock patterns for a specific Solana account, showing timeline of write locks, conflict events, competing transactions, and hot scores. Queries can take 2-5 minutes for large time ranges. No caching - queries run fresh against ClickHouse. Requires one of three query modes: time_range, slot, or start_date/end_date.",
+        "operationId": "analyzeAccountWriteLocks",
+        "tags": ["Write Locks"],
+        "security": [{"SupabaseJWT": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["account"],
+                "properties": {
+                  "account": {
+                    "type": "string",
+                    "description": "Account address to analyze (base58, 32-44 characters)",
+                    "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+                    "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"
+                  },
+                  "time_range": {
+                    "type": "string",
+                    "description": "Query mode 1: Time range (mutually exclusive with slot or start_date/end_date)",
+                    "enum": ["1h", "3h", "6h", "12h", "24h", "48h", "72h"],
+                    "example": "24h"
+                  },
+                  "slot": {
+                    "type": "integer",
+                    "description": "Query mode 2: Specific slot number (mutually exclusive with time_range or start_date/end_date)",
+                    "minimum": 1,
+                    "example": 370537741
+                  },
+                  "start_date": {
+                    "type": "integer",
+                    "description": "Query mode 3: Start of custom date range - Unix timestamp in seconds (requires end_date, mutually exclusive with time_range or slot, max 7 days)",
+                    "minimum": 1,
+                    "example": 1729368000
+                  },
+                  "end_date": {
+                    "type": "integer",
+                    "description": "Query mode 3: End of custom date range - Unix timestamp in seconds (requires start_date, max 7 days range)",
+                    "minimum": 1,
+                    "example": 1729454400
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account write lock analysis results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean", "example": true},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "account": {"type": "string", "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"},
+                        "query_mode": {"type": "string", "enum": ["time_range", "slot", "custom_date"], "example": "time_range"},
+                        "query_value": {"type": "string", "example": "24h"},
+                        "slot_range": {
+                          "type": "object",
+                          "properties": {
+                            "min": {"type": "integer", "example": 370500000},
+                            "max": {"type": "integer", "example": 370537741}
+                          }
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_write_locks": {"type": "integer", "description": "Total write lock count", "example": 1250},
+                            "total_conflicts": {"type": "integer", "description": "Total conflict events", "example": 45},
+                            "unique_signers": {"type": "integer", "description": "Number of unique wallets accessing the account", "example": 23},
+                            "avg_locks_per_slot": {"type": "number", "description": "Average write locks per slot", "example": 2.5},
+                            "hottest_slot": {"type": "integer", "nullable": true, "description": "Slot with most write locks", "example": 370520145},
+                            "hottest_slot_locks": {"type": "integer", "nullable": true, "description": "Lock count in hottest slot", "example": 15},
+                            "hot_score": {"type": "number", "description": "Calculated hot score (0-10)", "example": 7.8}
+                          }
+                        },
+                        "write_locks_timeline": {
+                          "type": "array",
+                          "description": "Time series of write lock counts per slot",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {"type": "integer", "example": 370537741},
+                              "write_locks": {"type": "integer", "example": 12},
+                              "timestamp": {"type": "string", "format": "date-time", "example": "2025-10-01T19:22:33Z"}
+                            }
+                          }
+                        },
+                        "conflict_timeline": {
+                          "type": "array",
+                          "description": "Time series of conflict events per slot",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {"type": "integer", "example": 370537741},
+                              "conflict_events": {"type": "integer", "example": 3},
+                              "timestamp": {"type": "string", "format": "date-time", "example": "2025-10-01T19:22:33Z"}
+                            }
+                          }
+                        },
+                        "competing_transactions": {
+                          "type": "array",
+                          "description": "Up to 100 most recent competing transactions",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "signature": {"type": "string", "example": "5Pj5fCupXLUePYn18JkY8SrRaWFiUctuDTRwvUy2ML9yvkENLb1QMYbcBGcBXRrSVDjp7RjUwk9a3rLC6gpvtYpZ"},
+                              "slot": {"type": "integer", "example": 370537741},
+                              "signer": {"type": "string", "example": "HwraPsoNmYpumpFnmStvzQ27Pm4U8r3M6gPD7mnk6ST6"}
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "timestamp": {"type": "string", "format": "date-time", "example": "2025-10-02T15:30:45.123Z"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "examples": {
+                  "missing_account": {
+                    "value": {
+                      "error": "Missing account",
+                      "details": "account field is required",
+                      "timestamp": "2025-10-02T15:30:45.123Z"
+                    }
+                  },
+                  "conflicting_params": {
+                    "value": {
+                      "error": "Invalid parameters",
+                      "details": "Must provide exactly one of: time_range, slot, or start_date/end_date",
+                      "timestamp": "2025-10-02T15:30:45.123Z"
+                    }
+                  },
+                  "date_range_too_large": {
+                    "value": {
+                      "error": "Invalid date range",
+                      "details": "Date range cannot exceed 7 days",
+                      "timestamp": "2025-10-02T15:30:45.123Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"},
+          "403": {"$ref": "#/paths/~1analyze-trade/post/responses/403"},
+          "429": {"$ref": "#/paths/~1analyze-trade/post/responses/429"}
+        }
+      }
+    },
+    "/api/write-locks/hot-accounts": {
+      "post": {
+        "summary": "Discover Hot Accounts",
+        "description": "Discover the hottest accounts with the most write lock contention across the entire Solana network. Returns ranked list with hot scores and heatmap data for the top 20 accounts. Very expensive queries - can take 2-5+ minutes. No caching. Requires either time_range OR slot parameter.",
+        "operationId": "discoverHotAccounts",
+        "tags": ["Write Locks"],
+        "security": [{"SupabaseJWT": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "time_range": {
+                    "type": "string",
+                    "description": "Query mode 1: Time range (mutually exclusive with slot)",
+                    "enum": ["1h", "3h", "6h", "12h"],
+                    "example": "6h"
+                  },
+                  "slot": {
+                    "type": "integer",
+                    "description": "Query mode 2: Specific slot number (mutually exclusive with time_range)",
+                    "minimum": 1,
+                    "example": 370537741
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Number of hot accounts to return",
+                    "default": 50,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "example": 50
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ranked list of hot accounts with heatmap data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean", "example": true},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "query_mode": {"type": "string", "enum": ["time_range", "slot"], "example": "time_range"},
+                        "query_value": {"type": "string", "example": "6h"},
+                        "slot_range": {
+                          "type": "object",
+                          "properties": {
+                            "min": {"type": "integer", "example": 370500000},
+                            "max": {"type": "integer", "example": 370537741}
+                          }
+                        },
+                        "limit": {"type": "integer", "example": 50},
+                        "hot_accounts": {
+                          "type": "array",
+                          "description": "Ranked by hot_score descending",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "account_id": {"type": "string", "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"},
+                              "write_count": {"type": "integer", "description": "Total write operations", "example": 2340},
+                              "conflict_count": {"type": "integer", "description": "Total conflict events", "example": 89},
+                              "unique_signers": {"type": "integer", "description": "Number of unique wallets", "example": 45},
+                              "hot_score": {"type": "number", "description": "Calculated hot score (0-10)", "example": 8.5}
+                            }
+                          }
+                        },
+                        "heatmap_data": {
+                          "type": "array",
+                          "description": "Time-bucketed access patterns for top 20 accounts (up to 1000 data points)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {"type": "integer", "example": 370537741},
+                              "account_id": {"type": "string", "example": "FnmStvzQ27Pm4U8r3M6gPD7mnk6ST6HwraPsoNmYpump"},
+                              "access_count": {"type": "integer", "description": "Total access count", "example": 25},
+                              "write_count": {"type": "integer", "description": "Write operations", "example": 18},
+                              "read_count": {"type": "integer", "description": "Read operations", "example": 7},
+                              "timestamp": {"type": "string", "format": "date-time", "example": "2025-10-01T19:22:33Z"}
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "timestamp": {"type": "string", "format": "date-time", "example": "2025-10-02T15:30:45.123Z"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"},
+                "examples": {
+                  "missing_param": {
+                    "value": {
+                      "error": "Missing required parameter",
+                      "details": "Must provide either time_range or slot",
+                      "timestamp": "2025-10-02T15:30:45.123Z"
+                    }
+                  },
+                  "conflicting_params": {
+                    "value": {
+                      "error": "Invalid parameters",
+                      "details": "Cannot provide both time_range and slot",
+                      "timestamp": "2025-10-02T15:30:45.123Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/paths/~1analyze-trade/post/responses/401"},
+          "403": {"$ref": "#/paths/~1analyze-trade/post/responses/403"},
           "429": {"$ref": "#/paths/~1analyze-trade/post/responses/429"}
         }
       }
@@ -735,6 +1395,14 @@
     {
       "name": "Data Management",
       "description": "Backfill and data operations"
+    },
+    {
+      "name": "MEV Analysis",
+      "description": "Advanced MEV competitor discovery and validation (async job queue)"
+    },
+    {
+      "name": "Write Locks",
+      "description": "Account write lock contention and hot account analysis"
     }
   ]
 }

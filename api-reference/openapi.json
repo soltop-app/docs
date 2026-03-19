@@ -36,6 +36,74 @@
       }
     },
     "schemas": {
+      "SandwichIncident": {
+        "type": "object",
+        "properties": {
+          "attacker_signature": { "type": "string", "description": "Attacker's transaction signature" },
+          "attacker_signer": { "type": "string", "description": "Attacker's wallet address" },
+          "slot": { "type": "integer", "description": "Slot of the attacker's transaction" },
+          "poh_tick": { "type": "string", "description": "PoH tick position (BigInt as string)" },
+          "poh_tick_offset": { "type": "string", "description": "PoH tick distance from victim (negative = before)" },
+          "interaction_type": { "type": "string", "enum": ["sandwich", "frontrun", "backrun"], "description": "Type of MEV interaction" },
+          "pool_address": { "type": "string", "description": "DEX pool where the interaction occurred" },
+          "pool_label": { "type": "string", "description": "Human-readable pool label" },
+          "success": { "type": "boolean", "description": "Whether the attacker's transaction executed successfully" }
+        }
+      },
+      "SandwichCheckResult": {
+        "type": "object",
+        "properties": {
+          "signature": { "type": "string", "description": "Input transaction signature" },
+          "found": { "type": "boolean", "description": "Whether the transaction was found in timing_data" },
+          "slot": { "type": "integer", "description": "Slot number" },
+          "poh_tick": { "type": "string", "description": "PoH tick position (BigInt as string)" },
+          "signer": { "type": "string", "description": "Wallet that signed the transaction" },
+          "pools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pool_address": { "type": "string" },
+                "pool_label": { "type": "string" },
+                "dex_name": { "type": "string" }
+              }
+            }
+          },
+          "incidents": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SandwichIncident" }
+          },
+          "sandwich_detected": { "type": "boolean", "description": "Whether a sandwich attack was detected" },
+          "mev_score": { "type": "integer", "description": "MEV risk score (0-100). Formula: min(100, round((sandwich*10 + frontrun*3 + backrun*1) / total * 50))" },
+          "success": { "type": "boolean", "description": "Whether the victim's transaction executed successfully" }
+        }
+      },
+      "SandwichCheckResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": {
+            "type": "object",
+            "properties": {
+              "results": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/SandwichCheckResult" }
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "total_checked": { "type": "integer", "description": "Number of signatures submitted" },
+                  "total_found": { "type": "integer", "description": "Number found in timing_data" },
+                  "total_sandwich_attacks": { "type": "integer", "description": "Number of sandwich attacks detected" },
+                  "total_frontrun_incidents": { "type": "integer", "description": "Total frontrun incidents" },
+                  "total_backrun_incidents": { "type": "integer", "description": "Total backrun incidents" },
+                  "slot_range_used": { "type": "integer", "description": "Slot range used for the analysis" }
+                }
+              }
+            }
+          }
+        }
+      },
       "Transaction": {
         "type": "object",
         "properties": {
@@ -1094,10 +1162,163 @@
         }
       }
     },
+    "/mev/check-sandwich": {
+      "post": {
+        "summary": "Check Sandwich Attacks (Async)",
+        "description": "Check one or more transaction signatures for sandwich attacks within a configurable slot range. Submits an async job and returns a jobId. Poll `/mev/job-status/:jobId` for results. Results are cached for 5 minutes. Uses RPC pre-lookup for efficient ClickHouse partition pruning. Detection covers cross-slot and intra-slot (same PoH tick) ordering via entry_index/tx_index.",
+        "operationId": "checkSandwich",
+        "tags": ["MEV Analysis"],
+        "security": [{ "SupabaseJWT": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["signatures"],
+                "properties": {
+                  "signatures": {
+                    "oneOf": [
+                      { "type": "string", "description": "Single transaction signature" },
+                      {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "maxItems": 50,
+                        "description": "Array of transaction signatures (max 50)"
+                      }
+                    ],
+                    "example": ["48kLA6633tthDaBHTpzv9qXFkypFajpzyAd7hP8xRu8ggr8VhG5NXUKs7M2SYi57ntDKwPEqFgUGHrvXVd7pzFRE"]
+                  },
+                  "slot_range": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000,
+                    "default": 20,
+                    "description": "Slot range (±) to search for attackers. 0 = intra-slot only."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job submitted or cached result returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "description": "Job queued",
+                      "properties": {
+                        "success": { "type": "boolean", "example": true },
+                        "jobId": { "type": "string", "example": "mev-sandwich-check-abc123-1773915254896" },
+                        "status": { "type": "string", "example": "queued" },
+                        "message": { "type": "string", "example": "Sandwich check started. Poll /mev/job-status/:jobId for updates." }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Cached result",
+                      "$ref": "#/components/schemas/SandwichCheckResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "examples": {
+                  "missing": {
+                    "value": { "error": "Invalid request", "details": "signatures is required (string or array of strings)" }
+                  },
+                  "tooMany": {
+                    "value": { "error": "Invalid request", "details": "Maximum 50 signatures per request" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/paths/~1analyze-trade/post/responses/401" },
+          "403": { "$ref": "#/paths/~1analyze-trade/post/responses/403" },
+          "429": { "$ref": "#/paths/~1analyze-trade/post/responses/429" }
+        }
+      }
+    },
+    "/mev/check-sandwich-fast": {
+      "post": {
+        "summary": "Check Sandwich Attack (Sync / Fast)",
+        "description": "Synchronous sandwich check for a single transaction. Returns the result directly with no job queue or polling required. Uses tighter parameters for speed: ±1 min timestamp window (vs ±5 min), max ±10 slot range. Ideal for quick single-transaction lookups. Results are cached for 5 minutes.",
+        "operationId": "checkSandwichFast",
+        "tags": ["MEV Analysis"],
+        "security": [{ "SupabaseJWT": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["signature"],
+                "properties": {
+                  "signature": {
+                    "type": "string",
+                    "description": "Single transaction signature to check",
+                    "example": "48kLA6633tthDaBHTpzv9qXFkypFajpzyAd7hP8xRu8ggr8VhG5NXUKs7M2SYi57ntDKwPEqFgUGHrvXVd7pzFRE"
+                  },
+                  "slot_range": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "default": 1,
+                    "description": "Slot range (±) to search for attackers. 0 = intra-slot only. Max 10."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sandwich check result returned directly",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SandwichCheckResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Invalid request", "details": "signature is required (single string)" }
+              }
+            }
+          },
+          "401": { "$ref": "#/paths/~1analyze-trade/post/responses/401" },
+          "403": { "$ref": "#/paths/~1analyze-trade/post/responses/403" },
+          "429": { "$ref": "#/paths/~1analyze-trade/post/responses/429" },
+          "503": {
+            "description": "ClickHouse unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Service unavailable", "details": "ClickHouse not available" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/mev/job-status/{jobId}": {
       "get": {
         "summary": "Get MEV Job Status",
-        "description": "Poll for job status and retrieve results when complete. Used for both discovery and validation jobs. Job states: waiting (queued), active (processing), completed (results available), failed (error occurred). No subscription check - allows retrieving results even if subscription expires during processing.",
+        "description": "Poll for job status and retrieve results when complete. Used for discovery, validation, and sandwich check jobs. Job states: waiting (queued), active (processing), completed (results available), failed (error occurred). No subscription check - allows retrieving results even if subscription expires during processing.",
         "operationId": "getMevJobStatus",
         "tags": ["MEV Analysis"],
         "security": [{ "SupabaseJWT": [] }],
